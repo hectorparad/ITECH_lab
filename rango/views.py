@@ -160,71 +160,79 @@ def category(request, category_name_url):
 
 
 def add_category(request):
+
+    if request.user.is_authenticated():
     # Get the context from the request.
-    context = RequestContext(request)
+        context = RequestContext(request)
     # A HTTP POST?
-    if request.method == 'POST':
-        form = CategoryForm(request.POST)
+        if request.method == 'POST':
+            form = CategoryForm(request.POST)
 
         # Have we been provided with a valid form?
-        if form.is_valid():
+            if form.is_valid():
             # Save the new category to the database.
-            form.save(commit=True)
+                form.save(commit=True)
 
             # Now call the index() view.
             # The user will be shown the homepage.
-            return index(request)
-        else:
+                return index(request)
+            else:
             # The supplied form contained errors - just print them to the terminal.
-            print form.errors
-    else:
+                print form.errors
+        else:
         # If the request was not a POST, display the form to enter details.
-        form = CategoryForm()
+            form = CategoryForm()
 
     # Bad form (or form details), no form supplied...
     # Render the form with error messages (if any).
-    return render_to_response('rango/add_category.html', {'form': form}, context)
+        return render_to_response('rango/add_category.html', {'form': form}, context)
+    else:
+	    return HttpResponse("You need to logg in to access this page.")
 
 def add_page(request, category_name_url):
-    context = RequestContext(request)
 
-    category_name = decodeUrl(category_name_url)
-    if request.method == 'POST':
-        form = PageForm(request.POST)
+    if request.user.is_authenticated():
+        context = RequestContext(request)
 
-        if form.is_valid():
+        category_name = decodeUrl(category_name_url)
+        if request.method == 'POST':
+            form = PageForm(request.POST)
+
+            if form.is_valid():
             # This time we cannot commit straight away.
             # Not all fields are automatically populated!
-            page = form.save(commit=False)
+                page = form.save(commit=False)
 
             # Retrieve the associated Category object so we can add it.
             # Wrap the code in a try block - check if the category actually exists!
-            try:
-                cat = Category.objects.get(name=category_name)
-                page.category = cat
-            except Category.DoesNotExist:
+                try:
+                    cat = Category.objects.get(name=category_name)
+                    page.category = cat
+                except Category.DoesNotExist:
                 # If we get here, the category does not exist.
                 # We render the add_page.html template without a context dictionary.
                 # This will trigger the red text to appear in the template!
-                return render_to_response('rango/add_page.html', {}, context)
+                    return render_to_response('rango/add_page.html', {}, context)
 
             # Also, create a default value for the number of views.
-            page.views = 0
+                page.views = 0
 
             # With this, we can then save our new model instance.
-            page.save()
+                page.save()
 
             # Now that the page is saved, display the category instead.
-            return category(request, category_name_url)
+                return category(request, category_name_url)
+            else:
+                print form.errors
         else:
-            print form.errors
-    else:
-        form = PageForm()
+            form = PageForm()
 
-    return render_to_response( 'rango/add_page.html',
-            {'category_name_url': category_name_url,
-             'category_name': category_name, 'form': form},
-             context)
+        return render_to_response( 'rango/add_page.html',
+                {'category_name_url': category_name_url,
+                 'category_name': category_name, 'form': form},
+                 context)
+    else:
+	    return HttpResponse("You need to logg in to access this page.")
 
 
 def decodeUrl(name_url):
@@ -236,68 +244,73 @@ def encodeUrl(name):
 
 def register(request):
 
+    if not request.user.is_authenticated():
+
     #if request.session.test_cookie_worked():
         #print ">>>> TEST COOKIE WORKED!"
         #request.session.delete_test_cookie()
 
     # Like before, get the request's context.
-    context = RequestContext(request)
+        context = RequestContext(request)
 
     # A boolean value for telling the template whether the registration was successful.
     # Set to False initially. Code changes value to True when registration succeeds.
-    registered = False
+        registered = False
 
     # If it's a HTTP POST, we're interested in processing form data.
-    if request.method == 'POST':
+        if request.method == 'POST':
         # Attempt to grab information from the raw form information.
         # Note that we make use of both UserForm and UserProfileForm.
-        user_form = UserForm(data=request.POST)
-        profile_form = UserProfileForm(data=request.POST)
+            user_form = UserForm(data=request.POST)
+            profile_form = UserProfileForm(data=request.POST)
 
         # If the two forms are valid...
-        if user_form.is_valid() and profile_form.is_valid():
+            if user_form.is_valid() and profile_form.is_valid():
             # Save the user's form data to the database.
-            user = user_form.save()
+                user = user_form.save()
 
             # Now we hash the password with the set_password method.
             # Once hashed, we can update the user object.
-            user.set_password(user.password)
-            user.save()
+                user.set_password(user.password)
+                user.save()
 
             # Now sort out the UserProfile instance.
             # Since we need to set the user attribute ourselves, we set commit=False.
             # This delays saving the model until we're ready to avoid integrity problems.
-            profile = profile_form.save(commit=False)
-            profile.user = user
+                profile = profile_form.save(commit=False)
+                profile.user = user
 
             # Did the user provide a profile picture?
             # If so, we need to get it from the input form and put it in the UserProfile model.
-            if 'picture' in request.FILES:
-                profile.picture = request.FILES['picture']
+                if 'picture' in request.FILES:
+                    profile.picture = request.FILES['picture']
 
             # Now we save the UserProfile model instance.
-            profile.save()
+                profile.save()
 
             # Update our variable to tell the template registration was successful.
-            registered = True
+                registered = True
 
         # Invalid form or forms - mistakes or something else?
         # Print problems to the terminal.
         # They'll also be shown to the user.
-        else:
-            print user_form.errors, profile_form.errors
+            else:
+                print user_form.errors, profile_form.errors
 
     # Not a HTTP POST, so we render our form using two ModelForm instances.
     # These forms will be blank, ready for user input.
-    else:
-        user_form = UserForm()
-        profile_form = UserProfileForm()
+        else:
+            user_form = UserForm()
+            profile_form = UserProfileForm()
 
     # Render the template depending on the context.
-    return render_to_response(
-            'rango/register.html',
-            {'user_form': user_form, 'profile_form': profile_form, 'registered': registered},
-            context)
+        return render_to_response(
+                'rango/register.html',
+                {'user_form': user_form, 'profile_form': profile_form, 'registered': registered},
+                context)
+    else:
+	    return HttpResponse("You are already logged in.")
+	
 
 def user_login(request):
     # Like before, obtain the context for the user's request.
