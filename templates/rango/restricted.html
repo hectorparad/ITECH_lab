@@ -1,0 +1,12 @@
+
+{% extends 'rango/base.html' %}
+{% block title %}no access{% endblock %}
+	{% block body_block %}
+
+        {% if registered %}
+        
+		
+        {% else %}
+        <h1>Access is denied.</h1>
+        {% endif %}
+		{% endblock %}
